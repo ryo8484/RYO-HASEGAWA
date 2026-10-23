@@ -88,7 +88,7 @@
   <div class="app">
     <header>
       <h1>YouTube動画ライブラリ</h1>
-      <p class="subtitle">動画・再生リストをカテゴリで整理して再生できます。公開サイトでは登録データを共有できます。</p>
+      <p class="subtitle">URLとカテゴリを登録して、タイトルからYouTubeを開けます。</p>
     </header>
 
     <div class="layout">
@@ -254,11 +254,7 @@
         if (!isYouTubeHost) return null;
         let id = "";
         const playlistId = url.searchParams.get("list");
-        if (
-          playlistId &&
-          (host === "youtu.be" || url.pathname === "/playlist" || url.pathname === "/watch") &&
-          /^[A-Za-z0-9_-]{10,}$/.test(playlistId)
-        ) {
+        if (playlistId && url.pathname === "/playlist" && /^[A-Za-z0-9_-]{10,}$/.test(playlistId)) {
           return { id: playlistId, type: "playlist" };
         }
         if (host === "youtu.be") {
