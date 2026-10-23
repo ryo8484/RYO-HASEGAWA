@@ -43,6 +43,7 @@
     .button.danger { color: #a12828; }
     .button.small { min-height: 34px; padding: 6px 10px; font-size: .84rem; }
     .help { margin: 9px 0 0; color: #646a73; font-size: .82rem; line-height: 1.6; }
+    .api-key-field { margin-top: 12px; }
     .notice { min-height: 1.5em; margin: 12px 0 0; font-size: .9rem; }
     .notice.error { color: #a12828; }
     .notice.success { color: #176a3a; }
@@ -99,11 +100,16 @@
             <div class="form-grid">
               <div class="field">
                 <label for="video-url">YouTube動画または再生リストのURL</label>
-                <input id="video-url" type="url" placeholder="動画URL または https://www.youtube.com/playlist?list=..." required>
+                <input id="video-url" type="url" placeholder="YouTubeの動画または再生リストURL" required>
               </div>
               <div class="field">
                 <label for="video-category">カテゴリ</label>
                 <select id="video-category"></select>
+              </div>
+              <div class="field api-key-field">
+                <label for="playlist-api-key">YouTube Data APIキー（再生リスト名の取得用）</label>
+                <input id="playlist-api-key" type="password" autocomplete="off" placeholder="動画だけ登録する場合は不要です">
+                <span class="help">再生リスト名を取得するときだけ入力します。保存されません。APIキーはYouTube Data API v3のみに制限してください。</span>
               </div>
             </div>
             <div class="actions">
@@ -121,7 +127,7 @@
               <input id="search" type="search" aria-label="動画を検索" placeholder="タイトルを検索" style="max-width: 240px">
             </div>
           </div>
-          <p class="help">タイトルをクリックするとYouTubeを開きます。再生リストはIDで表示します。</p>
+          <p class="help">タイトルをクリックするとYouTubeを開きます。</p>
           <div id="video-list" class="video-list"></div>
         </section>
       </main>
@@ -153,6 +159,7 @@
         addForm: document.getElementById("add-form"),
         videoUrl: document.getElementById("video-url"),
         videoCategory: document.getElementById("video-category"),
+        playlistApiKey: document.getElementById("playlist-api-key"),
         addMessage: document.getElementById("add-message"),
         categoryList: document.getElementById("category-list"),
         categoryForm: document.getElementById("category-form"),
@@ -406,6 +413,24 @@
         return metadata.title.trim();
       }
 
+      async function fetchPlaylistTitle(id, apiKey) {
+        const apiUrl = new URL("https://www.googleapis.com/youtube/v3/playlists");
+        apiUrl.searchParams.set("part", "snippet");
+        apiUrl.searchParams.set("id", id);
+        apiUrl.searchParams.set("key", apiKey);
+        const response = await fetch(apiUrl);
+        const result = await response.json();
+        if (!response.ok) {
+          const detail = result.error && result.error.message ? result.error.message : `HTTP ${response.status}`;
+          throw new Error(`再生リスト名を取得できませんでした: ${detail}`);
+        }
+        const title = result.items && result.items[0] && result.items[0].snippet && result.items[0].snippet.title;
+        if (typeof title !== "string" || !title.trim()) {
+          throw new Error("再生リストが見つからないか、タイトルを取得できませんでした。APIキーの制限とリストURLを確認してください。");
+        }
+        return title.trim();
+      }
+
       elements.exportData.addEventListener("click", () => {
         const blob = new Blob([`${JSON.stringify(state, null, 2)}\n`], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -427,22 +452,33 @@
           return;
         }
         const existing = state.videos.find(video => video.id === item.id && video.type === item.type);
-        if (existing) {
+        const canRefreshPlaylistTitle = item.type === "playlist" &&
+          existing && existing.title === `再生リスト (${item.id})`;
+        if (existing && !canRefreshPlaylistTitle) {
           showMessage(elements.addMessage, "このURLはすでに登録されています。", "error");
+          return;
+        }
+        const apiKey = elements.playlistApiKey.value.trim();
+        if (item.type === "playlist" && !apiKey) {
+          showMessage(elements.addMessage, "再生リスト名の取得にはYouTube Data APIキーを入力してください。", "error");
           return;
         }
         const submit = elements.addForm.querySelector('button[type="submit"]');
         submit.disabled = true;
         try {
-          showMessage(elements.addMessage, item.type === "video" ? "動画タイトルを取得しています…" : "追加しています…");
+          showMessage(elements.addMessage, item.type === "video" ? "動画タイトルを取得しています…" : "再生リスト名を取得しています…");
           const title = item.type === "video"
             ? await fetchVideoTitle(item.id)
-            : `再生リスト (${item.id})`;
-          state.videos.unshift({ ...item, title, category: elements.videoCategory.value, thumbnail: "" });
+            : await fetchPlaylistTitle(item.id, apiKey);
+          if (existing) {
+            existing.title = title;
+          } else {
+            state.videos.unshift({ ...item, title, category: elements.videoCategory.value, thumbnail: "" });
+          }
           if (saveData(elements.addMessage)) {
             elements.addForm.reset();
             render();
-            showMessage(elements.addMessage, "追加しました。タイトルをクリックするとYouTubeが開きます。", "success");
+            showMessage(elements.addMessage, existing ? "再生リスト名を更新しました。" : "追加しました。タイトルをクリックするとYouTubeが開きます。", "success");
           }
         } catch (error) {
           console.error("YouTube URLの登録に失敗しました。", error);
