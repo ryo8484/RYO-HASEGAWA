@@ -254,7 +254,7 @@
         if (!isYouTubeHost) return null;
         let id = "";
         const playlistId = url.searchParams.get("list");
-        if (playlistId && url.pathname === "/playlist" && /^[A-Za-z0-9_-]{10,}$/.test(playlistId)) {
+        if (playlistId && /^[A-Za-z0-9_-]{10,}$/.test(playlistId)) {
           return { id: playlistId, type: "playlist" };
         }
         if (host === "youtu.be") {
