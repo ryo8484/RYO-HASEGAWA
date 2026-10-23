@@ -29,7 +29,7 @@
     .panel { background: #fff; border: 1px solid #e2e5e9; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px #18223008; }
     h2 { margin: 0 0 14px; font-size: 1.05rem; }
     h3 { margin: 0; font-size: .98rem; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .field { display: grid; gap: 6px; min-width: 0; }
     .field.full { grid-column: 1 / -1; }
     label { font-size: .86rem; font-weight: 600; }
@@ -49,13 +49,13 @@
     .list-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
     .list-header h2 { margin: 0; }
     .video-list { display: grid; gap: 10px; }
-    .video-card { display: grid; grid-template-columns: 156px minmax(0, 1fr); gap: 14px; padding: 10px; border: 1px solid #e2e5e9; border-radius: 10px; }
-    .thumbnail { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; background: #eceff2; }
-    .thumbnail-placeholder { display: grid; place-items: center; padding: 8px; color: #606875; text-align: center; font-size: .84rem; }
+    .video-card { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 12px; border: 1px solid #e2e5e9; border-radius: 10px; }
     .item-kind { color: #646a73; font-size: .78rem; }
     .video-info { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-width: 0; }
     .video-title { line-height: 1.45; overflow-wrap: anywhere; }
-    .video-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; margin-top: auto; }
+    .video-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .video-title a { color: #174ea6; text-decoration: none; }
+    .video-title a:hover { text-decoration: underline; }
     .video-controls select { width: auto; min-width: 130px; min-height: 34px; padding: 5px 8px; font-size: .84rem; }
     .video-controls .button { min-height: 34px; padding: 5px 10px; font-size: .84rem; }
     .empty { padding: 28px 12px; color: #646a73; text-align: center; }
@@ -69,9 +69,6 @@
     .count { color: #737984; font-size: .84rem; }
     .category-form { display: flex; gap: 8px; margin-top: 12px; }
     .category-form input { min-width: 0; }
-    .player { overflow: hidden; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: #161616; }
-    .player iframe { width: 100%; height: 100%; border: 0; }
-    .player-placeholder { display: grid; place-items: center; height: 100%; padding: 20px; color: #fff; text-align: center; }
     [hidden] { display: none !important; }
 
     @media (max-width: 900px) {
@@ -82,8 +79,7 @@
       .app { padding: 16px; }
       .panel { padding: 15px; }
       .form-grid { grid-template-columns: 1fr; }
-      .field.full { grid-column: auto; }
-      .video-card { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 8px; }
+      .video-card { align-items: flex-start; flex-direction: column; gap: 10px; padding: 10px; }
       .video-controls select { width: 100%; }
     }
   </style>
@@ -98,16 +94,12 @@
     <div class="layout">
       <main class="main-column">
         <section class="panel" aria-labelledby="add-heading">
-          <h2 id="add-heading">動画・再生リストをURLで登録</h2>
+          <h2 id="add-heading">URLを追加</h2>
           <form id="add-form">
             <div class="form-grid">
-              <div class="field full">
+              <div class="field">
                 <label for="video-url">YouTube動画または再生リストのURL</label>
                 <input id="video-url" type="url" placeholder="動画URL または https://www.youtube.com/playlist?list=..." required>
-              </div>
-              <div class="field">
-                <label for="video-title">タイトル（省略可）</label>
-                <input id="video-title" type="text" maxlength="200" placeholder="動画タイトル">
               </div>
               <div class="field">
                 <label for="video-category">カテゴリ</label>
@@ -115,7 +107,7 @@
               </div>
             </div>
             <div class="actions">
-              <button class="button primary" type="submit">URLを登録</button>
+              <button class="button primary" type="submit">追加</button>
             </div>
           </form>
           <p id="add-message" class="notice" role="status" aria-live="polite"></p>
@@ -129,7 +121,7 @@
               <input id="search" type="search" aria-label="動画を検索" placeholder="タイトルを検索" style="max-width: 240px">
             </div>
           </div>
-          <p class="help">公開データの更新は「共有用JSONを書き出す」で作成した videos.json をこのフォルダーに置き、サイトを再公開してください。公開した動画URLは閲覧者にも見えます。</p>
+          <p class="help">タイトルをクリックするとYouTubeを開きます。再生リストはIDで表示します。</p>
           <div id="video-list" class="video-list"></div>
         </section>
       </main>
@@ -143,14 +135,6 @@
             <button class="button small" type="submit">追加</button>
           </form>
           <p id="category-message" class="notice" role="status" aria-live="polite"></p>
-        </section>
-
-        <section class="panel" aria-labelledby="player-heading">
-          <h2 id="player-heading">再生中</h2>
-          <div id="player" class="player">
-            <div class="player-placeholder">動画一覧の「再生」を選ぶと、ここに表示されます。</div>
-          </div>
-          <p id="playing-title" class="help"></p>
         </section>
       </aside>
     </div>
@@ -168,7 +152,6 @@
       const elements = {
         addForm: document.getElementById("add-form"),
         videoUrl: document.getElementById("video-url"),
-        videoTitle: document.getElementById("video-title"),
         videoCategory: document.getElementById("video-category"),
         addMessage: document.getElementById("add-message"),
         categoryList: document.getElementById("category-list"),
@@ -179,8 +162,6 @@
         exportData: document.getElementById("export-data"),
         videoList: document.getElementById("video-list"),
         videoTotal: document.getElementById("video-total"),
-        player: document.getElementById("player"),
-        playingTitle: document.getElementById("playing-title")
       };
 
       function loadData() {
@@ -356,7 +337,7 @@
         if (!videos.length) {
           const empty = document.createElement("div");
           empty.className = "empty";
-          empty.textContent = state.videos.length ? "該当する動画がありません。" : "動画または再生リストのURLを登録してください。";
+          empty.textContent = state.videos.length ? "該当する動画がありません。" : "YouTubeのURLを追加してください。";
           elements.videoList.append(empty);
           return;
         }
@@ -364,23 +345,18 @@
         for (const video of videos) {
           const card = document.createElement("article");
           card.className = "video-card";
-          let thumbnail;
-          if (video.type === "playlist") {
-            thumbnail = document.createElement("div");
-            thumbnail.className = "thumbnail thumbnail-placeholder";
-            thumbnail.textContent = "YouTube 再生リスト";
-          } else {
-            thumbnail = document.createElement("img");
-            thumbnail.className = "thumbnail";
-            thumbnail.src = video.thumbnail || `https://i.ytimg.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
-            thumbnail.alt = "";
-            thumbnail.loading = "lazy";
-          }
           const info = document.createElement("div");
           info.className = "video-info";
           const title = document.createElement("h3");
           title.className = "video-title";
-          title.textContent = video.title;
+          const open = document.createElement("a");
+          open.textContent = video.title;
+          open.href = video.type === "playlist"
+            ? `https://www.youtube.com/playlist?list=${encodeURIComponent(video.id)}`
+            : `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+          open.target = "_blank";
+          open.rel = "noopener noreferrer";
+          title.append(open);
           if (video.type === "playlist") {
             const kind = document.createElement("span");
             kind.className = "item-kind";
@@ -402,19 +378,6 @@
             video.category = category.value;
             if (saveData(elements.addMessage)) render();
           });
-          const play = document.createElement("button");
-          play.type = "button";
-          play.className = "button primary";
-          play.textContent = "再生";
-          play.addEventListener("click", () => playVideo(video));
-          const open = document.createElement("a");
-          open.className = "button";
-          open.textContent = "YouTubeで開く";
-          open.href = video.type === "playlist"
-            ? `https://www.youtube.com/playlist?list=${encodeURIComponent(video.id)}`
-            : `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
-          open.target = "_blank";
-          open.rel = "noopener noreferrer";
           const remove = document.createElement("button");
           remove.type = "button";
           remove.className = "button danger";
@@ -424,24 +387,27 @@
             state.videos = state.videos.filter(item => item.type !== video.type || item.id !== video.id);
             if (saveData(elements.addMessage)) render();
           });
-          controls.append(category, play, open, remove);
+          controls.append(category, remove);
           info.append(title, controls);
-          card.append(thumbnail, info);
+          card.append(info);
           elements.videoList.append(card);
         }
       }
 
-      function playVideo(video) {
-        const frame = document.createElement("iframe");
-        frame.src = video.type === "playlist"
-          ? `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(video.id)}&autoplay=1`
-          : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.id)}?autoplay=1`;
-        frame.title = video.title;
-        frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-        frame.allowFullscreen = true;
-        frame.referrerPolicy = "strict-origin-when-cross-origin";
-        elements.player.replaceChildren(frame);
-        elements.playingTitle.textContent = video.title;
+      async function fetchVideoTitle(id) {
+        const videoUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+        const oembedUrl = new URL("https://www.youtube.com/oembed");
+        oembedUrl.searchParams.set("url", videoUrl);
+        oembedUrl.searchParams.set("format", "json");
+        const response = await fetch(oembedUrl);
+        if (!response.ok) {
+          throw new Error("YouTubeから動画タイトルを取得できませんでした。URLと動画の公開状態を確認してください。");
+        }
+        const metadata = await response.json();
+        if (typeof metadata.title !== "string" || !metadata.title.trim()) {
+          throw new Error("YouTubeから動画タイトルを取得できませんでした。");
+        }
+        return metadata.title.trim();
       }
 
       elements.exportData.addEventListener("click", () => {
@@ -457,7 +423,7 @@
         showMessage(elements.addMessage, "共有用 videos.json を書き出しました。公開データを更新する場合はHTMLと同じフォルダーに置いて再公開してください。", "success");
       });
 
-      elements.addForm.addEventListener("submit", event => {
+      elements.addForm.addEventListener("submit", async event => {
         event.preventDefault();
         const item = itemFromUrl(elements.videoUrl.value.trim());
         if (!item) {
@@ -469,13 +435,24 @@
           showMessage(elements.addMessage, "このURLはすでに登録されています。", "error");
           return;
         }
-        const fallbackTitle = item.type === "playlist" ? `リスト (${item.id})` : `YouTube動画 (${item.id})`;
-        const title = elements.videoTitle.value.trim() || fallbackTitle;
-        state.videos.unshift({ ...item, title, category: elements.videoCategory.value, thumbnail: "" });
-        if (saveData(elements.addMessage)) {
-          elements.addForm.reset();
-          render();
-          showMessage(elements.addMessage, "URLを登録しました。", "success");
+        const submit = elements.addForm.querySelector('button[type="submit"]');
+        submit.disabled = true;
+        try {
+          showMessage(elements.addMessage, item.type === "video" ? "動画タイトルを取得しています…" : "追加しています…");
+          const title = item.type === "video"
+            ? await fetchVideoTitle(item.id)
+            : `再生リスト (${item.id})`;
+          state.videos.unshift({ ...item, title, category: elements.videoCategory.value, thumbnail: "" });
+          if (saveData(elements.addMessage)) {
+            elements.addForm.reset();
+            render();
+            showMessage(elements.addMessage, "追加しました。タイトルをクリックするとYouTubeが開きます。", "success");
+          }
+        } catch (error) {
+          console.error("YouTube URLの登録に失敗しました。", error);
+          showMessage(elements.addMessage, error instanceof Error ? error.message : "URLを追加できませんでした。", "error");
+        } finally {
+          submit.disabled = false;
         }
       });
 
