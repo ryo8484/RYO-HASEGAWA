@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f8f6">
+  <title>YouTube動画ライブラリ</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Yu Gothic UI", "Meiryo", sans-serif;
+      color: #202124;
+      background: #f4f5f7;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app { max-width: 1440px; margin: 0 auto; padding: 28px; }
+    header { margin-bottom: 22px; }
+    h1 { margin: 0 0 6px; font-size: clamp(1.5rem, 3vw, 2rem); }
+    .subtitle, .muted { color: #646a73; }
+    .subtitle { margin: 0; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+    .main-column, .side-column { display: grid; gap: 18px; }
+    .panel { background: #fff; border: 1px solid #e2e5e9; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px #18223008; }
+    h2 { margin: 0 0 14px; font-size: 1.05rem; }
+    h3 { margin: 0; font-size: .98rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { display: grid; gap: 6px; min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: .86rem; font-weight: 600; }
+    input, select { width: 100%; min-height: 42px; border: 1px solid #cbd0d7; border-radius: 8px; background: #fff; padding: 9px 11px; color: #202124; }
+    input:focus, select:focus, button:focus-visible { outline: 3px solid #98c5ff; outline-offset: 1px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+    .button { min-height: 40px; border: 1px solid #cbd0d7; border-radius: 8px; background: #fff; color: #202124; padding: 8px 13px; font-weight: 600; }
+    .button:hover { background: #f5f7f9; }
+    .button.primary { background: #c80020; border-color: #c80020; color: #fff; }
+    .button.primary:hover { background: #a9001a; }
+    .button.danger { color: #a12828; }
+    .button.small { min-height: 34px; padding: 6px 10px; font-size: .84rem; }
+    .help { margin: 9px 0 0; color: #646a73; font-size: .82rem; line-height: 1.6; }
+    .notice { min-height: 1.5em; margin: 12px 0 0; font-size: .9rem; }
+    .notice.error { color: #a12828; }
+    .notice.success { color: #176a3a; }
+    .list-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .list-header h2 { margin: 0; }
+    .video-list { display: grid; gap: 10px; }
+    .video-card { display: grid; grid-template-columns: 156px minmax(0, 1fr); gap: 14px; padding: 10px; border: 1px solid #e2e5e9; border-radius: 10px; }
+    .thumbnail { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; background: #eceff2; }
+    .thumbnail-placeholder { display: grid; place-items: center; padding: 8px; color: #606875; text-align: center; font-size: .84rem; }
+    .item-kind { color: #646a73; font-size: .78rem; }
+    .video-info { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-width: 0; }
+    .video-title { line-height: 1.45; overflow-wrap: anywhere; }
+    .video-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; margin-top: auto; }
+    .video-controls select { width: auto; min-width: 130px; min-height: 34px; padding: 5px 8px; font-size: .84rem; }
+    .video-controls .button { min-height: 34px; padding: 5px 10px; font-size: .84rem; }
+    .empty { padding: 28px 12px; color: #646a73; text-align: center; }
+    .categories { display: grid; gap: 7px; }
+    .category-row { display: flex; gap: 4px; align-items: center; }
+    .category-button { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 8px; background: transparent; padding: 10px; text-align: left; color: #333942; }
+    .category-button:hover { background: #f2f4f7; }
+    .category-button.active { background: #eef3fa; color: #174ea6; font-weight: 700; }
+    .category-remove { flex: 0 0 auto; min-width: 34px; min-height: 34px; padding: 4px; border: 0; border-radius: 7px; background: transparent; color: #737984; }
+    .category-remove:hover { background: #fbeeee; color: #a12828; }
+    .count { color: #737984; font-size: .84rem; }
+    .category-form { display: flex; gap: 8px; margin-top: 12px; }
+    .category-form input { min-width: 0; }
+    .player { overflow: hidden; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: #161616; }
+    .player iframe { width: 100%; height: 100%; border: 0; }
+    .player-placeholder { display: grid; place-items: center; height: 100%; padding: 20px; color: #fff; text-align: center; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .side-column { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .app { padding: 16px; }
+      .panel { padding: 15px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .video-card { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; padding: 8px; }
+      .video-controls select { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>YouTube動画ライブラリ</h1>
+      <p class="subtitle">動画・再生リストをカテゴリで整理して再生できます。公開サイトでは登録データを共有できます。</p>
+    </header>
+
+    <div class="layout">
+      <main class="main-column">
+        <section class="panel" aria-labelledby="add-heading">
+          <h2 id="add-heading">動画・再生リストをURLで登録</h2>
+          <form id="add-form">
+            <div class="form-grid">
+              <div class="field full">
+                <label for="video-url">YouTube動画または再生リストのURL</label>
+                <input id="video-url" type="url" placeholder="動画URL または https://www.youtube.com/playlist?list=..." required>
+              </div>
+              <div class="field">
+                <label for="video-title">タイトル（省略可）</label>
+                <input id="video-title" type="text" maxlength="200" placeholder="動画タイトル">
+              </div>
+              <div class="field">
+                <label for="video-category">カテゴリ</label>
+                <select id="video-category"></select>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="button primary" type="submit">URLを登録</button>
+            </div>
+          </form>
+          <p id="add-message" class="notice" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="panel" aria-labelledby="videos-heading">
+          <div class="list-header">
+            <h2 id="videos-heading">動画一覧 <span id="video-total" class="muted"></span></h2>
+            <div class="actions" style="margin-top: 0">
+              <button id="export-data" class="button small" type="button">共有用JSONを書き出す</button>
+              <input id="search" type="search" aria-label="動画を検索" placeholder="タイトルを検索" style="max-width: 240px">
+            </div>
+          </div>
+          <p class="help">公開データの更新は「共有用JSONを書き出す」で作成した videos.json をこのフォルダーに置き、サイトを再公開してください。公開した動画URLは閲覧者にも見えます。</p>
+          <div id="video-list" class="video-list"></div>
+        </section>
+      </main>
+
+      <aside class="side-column">
+        <section class="panel" aria-labelledby="category-heading">
+          <h2 id="category-heading">カテゴリ</h2>
+          <nav id="category-list" class="categories" aria-label="カテゴリ一覧"></nav>
+          <form id="category-form" class="category-form">
+            <input id="category-name" type="text" maxlength="40" placeholder="新しいカテゴリ" aria-label="新しいカテゴリ名" required>
+            <button class="button small" type="submit">追加</button>
+          </form>
+          <p id="category-message" class="notice" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="panel" aria-labelledby="player-heading">
+          <h2 id="player-heading">再生中</h2>
+          <div id="player" class="player">
+            <div class="player-placeholder">動画一覧の「再生」を選ぶと、ここに表示されます。</div>
+          </div>
+          <p id="playing-title" class="help"></p>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "youtube-library-v1";
+      const DEFAULT_CATEGORY = "その他";
+      const PRESET_CATEGORIES = ["心臓", "呼吸", "運動", "脳", "腎臓", "統計", DEFAULT_CATEGORY];
+      const initialData = { categories: [...PRESET_CATEGORIES], videos: [] };
+      const state = loadData();
+      let activeCategory = "すべて";
+
+      const elements = {
+        addForm: document.getElementById("add-form"),
+        videoUrl: document.getElementById("video-url"),
+        videoTitle: document.getElementById("video-title"),
+        videoCategory: document.getElementById("video-category"),
+        addMessage: document.getElementById("add-message"),
+        categoryList: document.getElementById("category-list"),
+        categoryForm: document.getElementById("category-form"),
+        categoryName: document.getElementById("category-name"),
+        categoryMessage: document.getElementById("category-message"),
+        search: document.getElementById("search"),
+        exportData: document.getElementById("export-data"),
+        videoList: document.getElementById("video-list"),
+        videoTotal: document.getElementById("video-total"),
+        player: document.getElementById("player"),
+        playingTitle: document.getElementById("playing-title")
+      };
+
+      function loadData() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return { categories: [...initialData.categories], videos: [] };
+          return normalizeData(JSON.parse(raw));
+        } catch (error) {
+          console.error("動画ライブラリの読み込みに失敗しました。", error);
+          window.setTimeout(() => showMessage(elements.addMessage, "保存データを読み込めませんでした。ブラウザーの開発者コンソールを確認してください。", "error"), 0);
+          return { categories: [...initialData.categories], videos: [] };
+        }
+      }
+
+      function normalizeData(parsed) {
+        if (!parsed || !Array.isArray(parsed.categories) || !Array.isArray(parsed.videos)) {
+          throw new Error("保存データの形式が正しくありません。");
+        }
+        const savedCategories = [...new Set(parsed.categories.filter(value => typeof value === "string" && value.trim() && value !== "未分類"))];
+        const categories = [...new Set([...PRESET_CATEGORIES, ...savedCategories])];
+        const videos = parsed.videos.filter(video =>
+          video && typeof video.id === "string" && typeof video.title === "string" &&
+          typeof video.category === "string"
+        ).map(video => ({
+          id: video.id,
+          title: video.title,
+          category: video.category === "未分類" || !categories.includes(video.category) ? DEFAULT_CATEGORY : video.category,
+          thumbnail: typeof video.thumbnail === "string" ? video.thumbnail : "",
+          type: video.type === "playlist" ? "playlist" : "video"
+        }));
+        return { categories, videos };
+      }
+
+      async function loadPublishedData() {
+        if (!["http:", "https:"].includes(window.location.protocol)) return;
+        try {
+          const response = await fetch(new URL("videos.json", window.location.href), { cache: "no-store" });
+          if (!response.ok) throw new Error(`videos.jsonを読み込めませんでした (HTTP ${response.status})`);
+          const published = normalizeData(await response.json());
+          const merged = new Map();
+          for (const video of [...published.videos, ...state.videos]) {
+            merged.set(`${video.type}:${video.id}`, video);
+          }
+          state.categories = [...new Set([...published.categories, ...state.categories])];
+          state.videos = [...merged.values()];
+          render();
+        } catch (error) {
+          console.error("公開データの読み込みに失敗しました。", error);
+          showMessage(elements.addMessage, "公開用データ videos.json を読み込めませんでした。ファイルがHTMLと同じフォルダーにあるか確認してください。", "error");
+        }
+      }
+
+      function saveData(messageElement = elements.addMessage) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          return true;
+        } catch (error) {
+          console.error("動画ライブラリの保存に失敗しました。", error);
+          showMessage(messageElement, "データを保存できませんでした。ブラウザーの保存容量や設定を確認してください。", "error");
+          return false;
+        }
+      }
+
+      function removeCategory(name) {
+        if (!window.confirm(`「${name}」を削除しますか？登録動画は「${DEFAULT_CATEGORY}」に移動します。`)) return;
+        state.categories = state.categories.filter(category => category !== name);
+        for (const video of state.videos) {
+          if (video.category === name) video.category = DEFAULT_CATEGORY;
+        }
+        if (activeCategory === name) activeCategory = "すべて";
+        if (saveData(elements.categoryMessage)) render();
+      }
+
+      function showMessage(element, text, type = "") {
+        element.textContent = text;
+        element.className = `notice${type ? ` ${type}` : ""}`;
+      }
+
+      function itemFromUrl(value) {
+        let url;
+        try {
+          url = new URL(value);
+        } catch {
+          return null;
+        }
+        if (!["http:", "https:"].includes(url.protocol)) return null;
+        const host = url.hostname.toLowerCase().replace(/^www\./, "");
+        const isYouTubeHost = host === "youtu.be" ||
+          ["youtube.com", "m.youtube.com", "music.youtube.com"].includes(host);
+        if (!isYouTubeHost) return null;
+        let id = "";
+        const playlistId = url.searchParams.get("list");
+        if (
+          playlistId &&
+          (host === "youtu.be" || url.pathname === "/playlist" || url.pathname === "/watch") &&
+          /^[A-Za-z0-9_-]{10,}$/.test(playlistId)
+        ) {
+          return { id: playlistId, type: "playlist" };
+        }
+        if (host === "youtu.be") {
+          id = url.pathname.split("/").filter(Boolean)[0] || "";
+        } else if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+          const parts = url.pathname.split("/").filter(Boolean);
+          if (url.pathname === "/watch") id = url.searchParams.get("v") || "";
+          else if (["shorts", "embed", "live"].includes(parts[0])) id = parts[1] || "";
+        }
+        return /^[A-Za-z0-9_-]{11}$/.test(id) ? { id, type: "video" } : null;
+      }
+
+      function render() {
+        renderCategories();
+        renderCategoryOptions();
+        renderVideos();
+      }
+
+      function renderCategories() {
+        elements.categoryList.replaceChildren();
+        const names = ["すべて", ...state.categories];
+        for (const name of names) {
+          const row = document.createElement("div");
+          row.className = "category-row";
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `category-button${activeCategory === name ? " active" : ""}`;
+          button.setAttribute("aria-pressed", String(activeCategory === name));
+          const label = document.createElement("span");
+          label.textContent = name;
+          const count = document.createElement("span");
+          count.className = "count";
+          count.textContent = String(name === "すべて" ? state.videos.length : state.videos.filter(video => video.category === name).length);
+          button.append(label, count);
+          button.addEventListener("click", () => {
+            activeCategory = name;
+            render();
+          });
+          row.append(button);
+          if (name !== "すべて" && !PRESET_CATEGORIES.includes(name)) {
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "category-remove";
+            remove.textContent = "×";
+            remove.setAttribute("aria-label", `${name}カテゴリを削除`);
+            remove.title = "カテゴリを削除";
+            remove.addEventListener("click", () => removeCategory(name));
+            row.append(remove);
+          }
+          elements.categoryList.append(row);
+        }
+      }
+
+      function renderCategoryOptions() {
+        for (const select of [elements.videoCategory]) {
+          const previous = select.value;
+          select.replaceChildren();
+          for (const category of state.categories) {
+            const option = document.createElement("option");
+            option.value = category;
+            option.textContent = category;
+            select.append(option);
+          }
+          select.value = state.categories.includes(previous) ? previous : DEFAULT_CATEGORY;
+        }
+      }
+
+      function renderVideos() {
+        const query = elements.search.value.trim().toLocaleLowerCase();
+        const videos = state.videos.filter(video =>
+          (activeCategory === "すべて" || video.category === activeCategory) &&
+          video.title.toLocaleLowerCase().includes(query)
+        );
+        elements.videoTotal.textContent = `(${videos.length})`;
+        elements.videoList.replaceChildren();
+        if (!videos.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = state.videos.length ? "該当する動画がありません。" : "動画または再生リストのURLを登録してください。";
+          elements.videoList.append(empty);
+          return;
+        }
+
+        for (const video of videos) {
+          const card = document.createElement("article");
+          card.className = "video-card";
+          let thumbnail;
+          if (video.type === "playlist") {
+            thumbnail = document.createElement("div");
+            thumbnail.className = "thumbnail thumbnail-placeholder";
+            thumbnail.textContent = "YouTube 再生リスト";
+          } else {
+            thumbnail = document.createElement("img");
+            thumbnail.className = "thumbnail";
+            thumbnail.src = video.thumbnail || `https://i.ytimg.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
+            thumbnail.alt = "";
+            thumbnail.loading = "lazy";
+          }
+          const info = document.createElement("div");
+          info.className = "video-info";
+          const title = document.createElement("h3");
+          title.className = "video-title";
+          title.textContent = video.title;
+          if (video.type === "playlist") {
+            const kind = document.createElement("span");
+            kind.className = "item-kind";
+            kind.textContent = "再生リスト";
+            title.append(document.createElement("br"), kind);
+          }
+          const controls = document.createElement("div");
+          controls.className = "video-controls";
+          const category = document.createElement("select");
+          category.setAttribute("aria-label", `${video.title}のカテゴリ`);
+          for (const name of state.categories) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            category.append(option);
+          }
+          category.value = video.category;
+          category.addEventListener("change", () => {
+            video.category = category.value;
+            if (saveData(elements.addMessage)) render();
+          });
+          const play = document.createElement("button");
+          play.type = "button";
+          play.className = "button primary";
+          play.textContent = "再生";
+          play.addEventListener("click", () => playVideo(video));
+          const open = document.createElement("a");
+          open.className = "button";
+          open.textContent = "YouTubeで開く";
+          open.href = video.type === "playlist"
+            ? `https://www.youtube.com/playlist?list=${encodeURIComponent(video.id)}`
+            : `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+          open.target = "_blank";
+          open.rel = "noopener noreferrer";
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "button danger";
+          remove.textContent = "削除";
+          remove.addEventListener("click", () => {
+            if (!window.confirm(`「${video.title}」を一覧から削除しますか？`)) return;
+            state.videos = state.videos.filter(item => item.type !== video.type || item.id !== video.id);
+            if (saveData(elements.addMessage)) render();
+          });
+          controls.append(category, play, open, remove);
+          info.append(title, controls);
+          card.append(thumbnail, info);
+          elements.videoList.append(card);
+        }
+      }
+
+      function playVideo(video) {
+        const frame = document.createElement("iframe");
+        frame.src = video.type === "playlist"
+          ? `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(video.id)}&autoplay=1`
+          : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.id)}?autoplay=1`;
+        frame.title = video.title;
+        frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = "strict-origin-when-cross-origin";
+        elements.player.replaceChildren(frame);
+        elements.playingTitle.textContent = video.title;
+      }
+
+      elements.exportData.addEventListener("click", () => {
+        const blob = new Blob([`${JSON.stringify(state, null, 2)}\n`], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "videos.json";
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showMessage(elements.addMessage, "共有用 videos.json を書き出しました。公開データを更新する場合はHTMLと同じフォルダーに置いて再公開してください。", "success");
+      });
+
+      elements.addForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const item = itemFromUrl(elements.videoUrl.value.trim());
+        if (!item) {
+          showMessage(elements.addMessage, "有効なYouTube動画または再生リストのURLを入力してください。", "error");
+          return;
+        }
+        const existing = state.videos.find(video => video.id === item.id && video.type === item.type);
+        if (existing) {
+          showMessage(elements.addMessage, "このURLはすでに登録されています。", "error");
+          return;
+        }
+        const fallbackTitle = item.type === "playlist" ? `リスト (${item.id})` : `YouTube動画 (${item.id})`;
+        const title = elements.videoTitle.value.trim() || fallbackTitle;
+        state.videos.unshift({ ...item, title, category: elements.videoCategory.value, thumbnail: "" });
+        if (saveData(elements.addMessage)) {
+          elements.addForm.reset();
+          render();
+          showMessage(elements.addMessage, "URLを登録しました。", "success");
+        }
+      });
+
+      elements.categoryForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const name = elements.categoryName.value.trim();
+        if (!name) return;
+        if (name === "すべて" || state.categories.includes(name)) {
+          showMessage(elements.categoryMessage, "そのカテゴリ名は使用できません。", "error");
+          return;
+        }
+        state.categories.push(name);
+        if (saveData(elements.categoryMessage)) {
+          elements.categoryName.value = "";
+          render();
+          showMessage(elements.categoryMessage, "カテゴリを追加しました。", "success");
+        }
+      });
+
+      elements.search.addEventListener("input", renderVideos);
+      render();
+      loadPublishedData();
+    })();
+  </script>
+</body>
+</html>
