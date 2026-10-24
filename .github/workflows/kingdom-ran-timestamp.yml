@@ -1,0 +1,80 @@
+name: キングダム乱 タイムスタンプ作成
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "YouTube動画のURL"
+        required: true
+        type: string
+      start_tier:
+        description: "画面から読めない時の補完用: 最初の級(通常は変更不要)"
+        required: false
+        default: "将軍級"
+        type: choice
+        options: ["将軍級", "大将軍級", "三大天級"]
+      start_no:
+        description: "補完用: 最初の戦場番号"
+        required: false
+        default: "1"
+        type: string
+      start_round:
+        description: "補完用: 三大天級の最初の周回"
+        required: false
+        default: "1"
+        type: string
+
+jobs:
+  timestamp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: kingdom-ran-timestamp/requirements.txt
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: ライブラリをインストール
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          pip install -r kingdom-ran-timestamp/requirements.txt
+
+      - name: タイムスタンプを作成
+        env:
+          VIDEO_URL: ${{ inputs.url }}
+          START_TIER: ${{ inputs.start_tier }}
+          START_NO: ${{ inputs.start_no }}
+          START_ROUND: ${{ inputs.start_round }}
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+        run: |
+          if [ -n "$YT_COOKIES" ]; then
+            printf '%s' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+            export YT_COOKIES_FILE="$RUNNER_TEMP/cookies.txt"
+          fi
+          python kingdom-ran-timestamp/kingdom_ran_chapters.py "$VIDEO_URL" \
+            --start-tier "$START_TIER" --start-no "$START_NO" --start-round "$START_ROUND" \
+            --out chapters.txt --no-clip
+          rm -f "$RUNNER_TEMP/cookies.txt"
+
+      - name: 結果を表示
+        run: |
+          {
+            echo "## タイムスタンプ(コピーしてYouTubeのコメントに貼り付け)"
+            echo
+            echo '```text'
+            cat chapters.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chapters
+          path: chapters.txt
