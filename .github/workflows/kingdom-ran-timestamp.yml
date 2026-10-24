@@ -45,24 +45,44 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-          pip install -r kingdom-ran-timestamp/requirements.txt
+          pip install -r kingdom-ran-timestamp/requirements.txt bgutil-ytdlp-pot-provider
+
+      - name: PO Tokenサーバーを起動
+        run: |
+          docker run -d --name pot -p 4416:4416 brainicism/bgutil-ytdlp-pot-provider
+          sleep 5
+
+      - name: 動画をダウンロード
+        env:
+          VIDEO_URL: ${{ inputs.url }}
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+        run: |
+          mkdir -p dl
+          COOKIE_ARGS=()
+          if [ -n "$YT_COOKIES" ]; then
+            printf '%s' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
+            COOKIE_ARGS=(--cookies "$RUNNER_TEMP/cookies.txt")
+          fi
+          ok=0
+          for client in "" "youtube:player_client=tv" "youtube:player_client=mweb" "youtube:player_client=web_embedded" "youtube:player_client=ios" "youtube:player_client=tv_simply"; do
+            echo "== 試行: ${client:-標準}"
+            ARGS=()
+            if [ -n "$client" ]; then ARGS=(--extractor-args "$client"); fi
+            if python -m yt_dlp "${COOKIE_ARGS[@]}" "${ARGS[@]}" -f "135/best[height<=480]/worst" -o "dl/v.%(ext)s" "$VIDEO_URL"; then ok=1; break; fi
+          done
+          rm -f "$RUNNER_TEMP/cookies.txt"
+          if [ "$ok" != 1 ]; then echo "ダウンロードに失敗しました"; exit 1; fi
+          ls -la dl
 
       - name: タイムスタンプを作成
         env:
-          VIDEO_URL: ${{ inputs.url }}
           START_TIER: ${{ inputs.start_tier }}
           START_NO: ${{ inputs.start_no }}
           START_ROUND: ${{ inputs.start_round }}
-          YT_COOKIES: ${{ secrets.YT_COOKIES }}
         run: |
-          if [ -n "$YT_COOKIES" ]; then
-            printf '%s' "$YT_COOKIES" > "$RUNNER_TEMP/cookies.txt"
-            export YT_COOKIES_FILE="$RUNNER_TEMP/cookies.txt"
-          fi
-          python kingdom-ran-timestamp/kingdom_ran_chapters.py "$VIDEO_URL" \
+          python kingdom-ran-timestamp/kingdom_ran_chapters.py dl/v.* \
             --start-tier "$START_TIER" --start-no "$START_NO" --start-round "$START_ROUND" \
             --out chapters.txt --no-clip
-          rm -f "$RUNNER_TEMP/cookies.txt"
 
       - name: 結果を表示
         run: |
